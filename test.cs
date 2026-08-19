@@ -9,8 +9,8 @@ using Array = Godot.Collections.Array;
 public partial class test : MeshInstance3D
 {
 	// Called when the node enters the scene tree for the first time.
-	[Export] public int width = 32;
-	[Export] public int height = 32;
+	[Export] public int width = 16;
+	[Export] public int height = 16;
 	[Export] public float restDistance = 0.2f;
 	
 	private Array vertices;
@@ -19,10 +19,13 @@ public partial class test : MeshInstance3D
 	
 	private RenderingDevice rd;
 	private Rid shader;
-	private Rid vertbuffer;
-	private Rid uniformset;
+	private Rid vertbufferin;
+	private Rid vertbufferout;
+	private Rid uniformseta;
+	private Rid uniformsetb;
 	private Rid pipeline;
 
+	[StructLayout(LayoutKind.Sequential, Pack = 16)]
 	struct GpuVertex
 	{
 		public Vector4 Position;
@@ -55,6 +58,7 @@ public partial class test : MeshInstance3D
 			GpuVerticies[j].Position = new Vector4(position.X, position.Y, position.Z, 1f);
 			GpuVerticies[j].Normal = new Vector4(normal.X, normal.Y, normal.Z, 1f);
 			GpuVerticies[j].PrevPosition =  new Vector4(position.X, position.Y, position.Z, 1f);
+
 			if (position.Z == 0)
 			{
 				GpuVerticies[j].Flags = new Vector4(1,0,0,1);
@@ -63,27 +67,49 @@ public partial class test : MeshInstance3D
 			{
 				GpuVerticies[j].Flags = new Vector4(0,0,0,1);
 			}
+			
 		}
 
 		
 		
 
 		byte[] inputbytes = MemoryMarshal.AsBytes(GpuVerticies.AsSpan()).ToArray();
-		vertbuffer = rd.StorageBufferCreate((uint)inputbytes.Length, inputbytes);
-		var vuniform = new RDUniform
+		vertbufferin = rd.StorageBufferCreate((uint)inputbytes.Length, inputbytes);
+		vertbufferout = rd.StorageBufferCreate((uint)inputbytes.Length, inputbytes);
+		var vuniformina = new RDUniform
 		{
 			UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 0
 		};
+		var vuniformoutb = new RDUniform
+		{
+			UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 1
+		};
 		
-		vuniform.AddId(vertbuffer);
+		vuniformina.AddId(vertbufferin);
+		vuniformoutb.AddId(vertbufferout);
 		
-		uniformset = rd.UniformSetCreate([vuniform], shader, 0);
+		uniformseta = rd.UniformSetCreate([vuniformina,vuniformoutb ], shader, 0);
+		var vuniforminb = new RDUniform
+		{
+			UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 0
+		};
+		var vuniformouta = new RDUniform
+		{
+			UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 1
+		};
+		vuniforminb.AddId(vertbufferout);
+		vuniformouta.AddId(vertbufferin);
+		uniformsetb = rd.UniformSetCreate([vuniforminb,vuniformouta ], shader, 0);
 		pipeline = rd.ComputePipelineCreate(shader);
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
+		bool isevenframe = (Engine.GetFramesDrawn() % 2 == 0);
+		Rid activeset = isevenframe ? uniformseta : uniformsetb;
+		Rid activebuffer = isevenframe ? vertbufferout : vertbufferin;
+		
 		float[] pushConstants =
 		{
 			(float)width,
@@ -96,13 +122,13 @@ public partial class test : MeshInstance3D
 		
 		var computelist = rd.ComputeListBegin();
 		rd.ComputeListBindComputePipeline(computelist, pipeline);
-		rd.ComputeListBindUniformSet(computelist, uniformset,0);
+		rd.ComputeListBindUniformSet(computelist, activeset,0);
 		rd.ComputeListSetPushConstant(computelist, pushConstantsBytes, (uint)pushConstantsBytes.Length);
-		rd.ComputeListDispatch(computelist, 2,2,1);
+		rd.ComputeListDispatch(computelist, 16,16,1);
 		rd.ComputeListEnd();
 		rd.Submit();
 		rd.Sync();
-		var outputbytes = rd.BufferGetData(vertbuffer);
+		var outputbytes = rd.BufferGetData(activebuffer);
 		GpuVertex[] updatedVertices = MemoryMarshal.Cast<byte, GpuVertex>(outputbytes).ToArray();
 		updateGeometry(updatedVertices);
 		
@@ -117,18 +143,18 @@ public partial class test : MeshInstance3D
 		List<Vector2> uvs = [];
 		List<Vector3> normals = [];
 		List<int> indices = [];
-		float side = width / 8;
+		float side = width / 4;
 		for (int y = 0; y < height; y++)
 		{
 			for (int x = 0; x < width; x++)
 			{
-				int index = y * (8 + 1) + x;
+				int index = y * (4 + 1) + x;
 				Vector3 pos = new Vector3(x * side, 0, y * - side);
 				verts.Add(pos);
 				int tl = index;
 				int tr = index + 1;
-				int bl = index + (8 + 1) + 1;
-				int br = index + (8 + 1);
+				int bl = index + (4 + 1) + 1;
+				int br = index + (4 + 1);
 				indices.AddRange(new int[]{tl,bl,br,tl,tr,bl});
 				normals.Add(Vector3.Up);
 			}
@@ -183,9 +209,11 @@ public partial class test : MeshInstance3D
 		if (what == NotificationPredelete)
 		{
 			rd.FreeRid(shader);
-			rd.FreeRid(uniformset);
+			rd.FreeRid(uniformsetb);
+			rd.FreeRid(uniformseta);
 			rd.FreeRid(pipeline);
-			rd.FreeRid(vertbuffer);
+			rd.FreeRid(vertbufferin);
+			rd.FreeRid(vertbufferout);
 		}
 	}
 }
