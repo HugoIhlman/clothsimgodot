@@ -5,6 +5,9 @@
 
 [sub_resource type="TorusMesh" id="TorusMesh_01dio"]
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lao8o"]
+cull_mode = 2
+
 [sub_resource type="ArrayMesh" id="ArrayMesh_0xm2m"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_mxnru"]
@@ -19,7 +22,8 @@ sky = SubResource("Sky_ig7tw")
 [node name="Node3D" type="Node3D" unique_id=1107290829]
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=17923400]
-transform = Transform3D(1, 0, 0, 0, 0.7039964, -0.7102035, 0, 0.7102035, 0.7039964, 0, 1.2325015, 0)
+transform = Transform3D(1, 0, 0, 0, 0.7039964, -0.7102035, 0, 0.7102035, 0.7039964, 0, 0, 0)
+visible = false
 mesh = SubResource("TorusMesh_01dio")
 script = ExtResource("1_ig7tw")
 
@@ -27,11 +31,15 @@ script = ExtResource("1_ig7tw")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5670242, 2.5516977)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1893750989]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10.104197, 0)
+transform = Transform3D(1, 0, 0, 0, 0.7052059, 0.70900255, 0, -0.70900255, 0.7052059, 0, 10.104197, 0)
 
 [node name="MeshInstance3D2" type="MeshInstance3D" parent="." unique_id=1185474716]
+material_override = SubResource("StandardMaterial3D_lao8o")
 mesh = SubResource("ArrayMesh_0xm2m")
 script = ExtResource("2_0xm2m")
+width = 32
+height = 32
+restDistance = 0.1
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2012327250]
 environment = SubResource("Environment_01dio")
