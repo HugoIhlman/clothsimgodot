@@ -30,6 +30,8 @@ public partial class test : MeshInstance3D
 	private Rid pipeline;
 	private RDUniform offsetUniform;
 	private RDUniform dataUniform;
+	private RDUniform bendOffsetUniform;
+	private RDUniform bendDataUniform;
 	private MeshDataTool mdt;
 
 	private List<uint>[] adjacencyMap;
@@ -60,10 +62,20 @@ public partial class test : MeshInstance3D
 		public uint pad1;
 		public uint pad2;
 	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 16)]
+	struct BendNeighbor
+	{
+		public uint index;
+		public float restdistance;
+		public float pad1;
+		public float pad2;
+	}
 	
 	public override void _Ready()
 	{
 		divs = width - 1;
+		//GetViewport().DebugDraw = Viewport.DebugDrawEnum.Wireframe;
 		rd = RenderingServer.CreateLocalRenderingDevice();
 		var shaderfile = GD.Load<RDShaderFile>("res://compute.glsl");
 		var shaderbytecode = shaderfile.GetSpirV();
@@ -76,7 +88,6 @@ public partial class test : MeshInstance3D
 			mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, surfaceArray);
 		}
 		mdt.CreateFromSurface(mesh, 0);
-		
 		
 		var GpuVerticies = new GpuVertex[mdt.GetVertexCount()];
 		for (int j = 0; j < mdt.GetVertexCount() ; j ++)
@@ -114,8 +125,9 @@ public partial class test : MeshInstance3D
 		vuniformoutb.AddId(vertbufferout);
 		
 		InitAdjacencyBuffers(mesh);
+		InitBendingBuffers(mesh);
 		
-		uniformseta = rd.UniformSetCreate([vuniformina,vuniformoutb, offsetUniform, dataUniform ], shader, 0);
+		uniformseta = rd.UniformSetCreate([vuniformina,vuniformoutb, offsetUniform, dataUniform, bendOffsetUniform, bendDataUniform ], shader, 0);
 		var vuniforminb = new RDUniform
 		{
 			UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 0
@@ -126,7 +138,7 @@ public partial class test : MeshInstance3D
 		};
 		vuniforminb.AddId(vertbufferout);
 		vuniformouta.AddId(vertbufferin);
-		uniformsetb = rd.UniformSetCreate([vuniforminb,vuniformouta, offsetUniform, dataUniform ], shader, 0);
+		uniformsetb = rd.UniformSetCreate([vuniforminb,vuniformouta, offsetUniform, dataUniform, bendOffsetUniform, bendDataUniform ], shader, 0);
 		pipeline = rd.ComputePipelineCreate(shader);
 	}
 
@@ -160,14 +172,17 @@ public partial class test : MeshInstance3D
 			if (!adjacencyMap[v2].Contains(v1)) adjacencyMap[v2].Add(v1);
 		}
 
-		List<uint> flattenedNeighborData = new List<uint>();
+		var flattenedNeighborData = new List<BendNeighbor>();
 		NeigborOffset[] offsets = new NeigborOffset[vertexcount];
 
 		for (int v = 0; v < vertexcount; v++)
 		{
 			offsets[v].startindex = (uint)flattenedNeighborData.Count;
 			offsets[v].count =  (uint)adjacencyMap[v].Count;
-			flattenedNeighborData.AddRange(adjacencyMap[v]);
+			foreach (var n in adjacencyMap[v])
+			{
+				flattenedNeighborData.Add(new BendNeighbor{index = n, restdistance = verts[v].DistanceTo(verts[(int)n])});	
+			}
 		}
 		
 		byte[] offsetsBytes = MemoryMarshal.AsBytes(offsets.AsSpan()).ToArray();
@@ -181,6 +196,75 @@ public partial class test : MeshInstance3D
 		
 		offsetUniform.AddId(offsetsRid);
 		dataUniform.AddId(dataRid);
+	}
+
+	void InitBendingBuffers(ArrayMesh mesh)
+	{
+		var arrays = mesh.SurfaceGetArrays(0);
+		Vector3[] verts = (Vector3[])arrays[(int)Mesh.ArrayType.Vertex];
+		int[] indices = (int[])arrays[(int)Mesh.ArrayType.Index];
+
+		var edgeToOpp = new System.Collections.Generic.Dictionary<(uint, uint), List<uint>>();
+
+		void addEdgeToOpp(uint v0, uint v1, uint v2)
+		{
+			var key = v0 < v1 ? (v0,v1) :  (v1,v0);
+			if (!edgeToOpp.TryGetValue(key, out var list))
+			{
+				list = new List<uint>();
+				edgeToOpp[key] = list;
+			}
+			list.Add(v2);
+		}
+
+		for (int i = 0; i < indices.Length; i += 3)
+		{
+			uint v0 = (uint)indices[i];
+			uint v1 = (uint)indices[i + 1];
+			uint v2 = (uint)indices[i + 2];
+			addEdgeToOpp(v0, v1, v2);
+			addEdgeToOpp(v1, v2, v0);
+			addEdgeToOpp(v2, v0, v1);
+		}
+		int vertcount = verts.Length;
+		var bendmap = new List<uint>[vertcount];
+		for (int i = 0; i < vertcount; i++)
+		{
+			bendmap[i] = new List<uint>();
+		}
+
+		foreach (var kvp in edgeToOpp)
+		{
+			var opp = kvp.Value;
+			if (opp.Count == 2)
+			{
+				bendmap[opp[0]].Add(opp[1]);
+				bendmap[opp[1]].Add(opp[0]);
+			}
+		}
+
+		var flattened = new List<BendNeighbor>();
+		var offsets = new NeigborOffset[vertcount];
+
+		for (int i = 0; i < vertcount; i++)
+		{
+			offsets[i].startindex = (uint)flattened.Count;
+			offsets[i].count = (uint)bendmap[i].Count;
+			foreach (var partner in bendmap[i])
+			{
+				flattened.Add(new BendNeighbor{index = partner, restdistance = verts[i].DistanceTo(verts[(int)partner]) });
+			}
+		}
+		
+		byte[] offsetsBytes = MemoryMarshal.AsBytes(offsets.AsSpan()).ToArray();
+		byte[] dataBytes = MemoryMarshal.AsBytes(flattened.ToArray().AsSpan()).ToArray();
+		
+		Rid bendOffsetRid = rd.StorageBufferCreate((uint)offsetsBytes.Length, offsetsBytes);
+		Rid dataRid = rd.StorageBufferCreate((uint)dataBytes.Length, dataBytes);
+		bendOffsetUniform = new RDUniform{UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 4};
+		bendDataUniform = new RDUniform{UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 5};
+		bendOffsetUniform.AddId(bendOffsetRid);
+		bendDataUniform.AddId(dataRid);
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -208,7 +292,6 @@ public partial class test : MeshInstance3D
 		rd.ComputeListBindComputePipeline(computelist, pipeline);
 		rd.ComputeListBindUniformSet(computelist, activeset,0);
 		uint xGroups = (uint)Mathf.CeilToInt(vertcount / 32);
-		uint yGroups = (uint)Mathf.CeilToInt((height * 4) / 16f);
 		rd.ComputeListSetPushConstant(computelist, pushConstantsBytes, (uint)pushConstantsBytes.Length);
 		rd.ComputeListDispatch(computelist, xGroups,1,1);
 		rd.ComputeListEnd();
@@ -235,12 +318,32 @@ public partial class test : MeshInstance3D
 		{
 			for (int x = 0; x < divs + 1; x++)
 			{
-				Vector3 pos = new Vector3(x * side * restDistance, 0, y * -side * restDistance);
-				if (y == 0 ||  y == divs || x == 0 ||  x == divs)
+				Vector3 pos = new Vector3(x * side, 0, y * -side );
+				if (y == 0)
 				{
 					pinnedVertices.Add(pos);
 				}
 				verts.Add(pos);
+				normals.Add(Vector3.Up);
+			}
+		}
+		
+		int gridvertcount = verts.Count;
+		
+		int[,] centeridx = new int[divs, divs];
+
+		for (int i = 0; i < divs; i++)
+		{
+			for (int j = 0; j < divs; j++)
+			{
+				int tlIdx = i * (divs + 1) + j;
+				int trIdx = tlIdx + 1;
+				int blIdx = tlIdx + (divs + 1);
+				int brIdx = blIdx + 1;
+
+				Vector3 center = (verts[tlIdx] + verts[trIdx] + verts[blIdx] + verts[brIdx]) / 4f;
+				centeridx[i, j] = verts.Count;
+				verts.Add(center);
 				normals.Add(Vector3.Up);
 			}
 		}
@@ -254,7 +357,8 @@ public partial class test : MeshInstance3D
 				int tr = index + 1;
 				int bl = index + (divs + 1) + 1;
 				int br = index + (divs + 1);
-				indices.AddRange(new int[]{tl,bl,br,tl,tr,bl});
+				int c = centeridx[i, j];
+				indices.AddRange(new int[]{tl,tr,c,tr,br,c,br,bl,c,bl,tl,c});
 			}
 		}
 		surfaceArray[(int)Mesh.ArrayType.Vertex] = verts.ToArray();
@@ -264,31 +368,16 @@ public partial class test : MeshInstance3D
 		return surfaceArray;
 	}
 
-	private Vector3 calculateNormals(int vertexid)
-	{
-		var n_verts = adjacencyMap[vertexid];
-		Vector3 sum = Vector3.Zero;
-		Vector3 a = mdt.GetVertex(vertexid);
-
-		for (int v = 1; v < n_verts.Count; v++)
-		{
-			Vector3 b = mdt.GetVertex((int)n_verts[v - 1]);
-			Vector3 c = mdt.GetVertex((int)n_verts[v]);
-			sum += (b - a).Cross(c - a);
-		}
-
-		return sum.Normalized();
-	}
-
 	private void updateGeometry(GpuVertex[] vertices)
 	{
 		var arraymesh = new ArrayMesh();
 		var surfacearray = new Array();
 		surfacearray.Resize((int)Mesh.ArrayType.Max);
-		Vector3[] vertarray = new Vector3[vertices.Length];
-		Vector3[] normalarray = new Vector3[vertices.Length];
+		int qc = divs * divs;
+		Vector3[] vertarray = new Vector3[vertices.Length + qc];
+		Vector3[] normalarray = new Vector3[vertices.Length + qc];
 		List<int> indices = [];
-		for (int i = 0; i < vertarray.Length; i++)
+		for (int i = 0; i < vertices.Length; i++)
 		{
 			vertarray[i] = new Vector3(vertices[i].Position.X , vertices[i].Position.Y, vertices[i].Position.Z);
 			normalarray[i] = Vector3.Up;
@@ -297,12 +386,12 @@ public partial class test : MeshInstance3D
 		{
 			for (int x = 0; x < divs; x++)
 			{
-				int index = y * (divs + 1) + x;
-				int tl = index;
-				int tr = index + 1;
-				int bl = index + (divs + 1) + 1;
-				int br = index + (divs + 1);
-				indices.AddRange(new int[]{tl,bl,br,tl,tr,bl});
+				int tl = y * (divs + 1) + x;
+				int tr = tl + 1;
+				int bl = tl + (divs + 1);
+				int br = bl + 1;
+				int c = ((divs + 1) * (divs + 1)) + (y*divs+x);
+				indices.AddRange(new int[]{tl,tr,c,tr,br,c,br,bl,c,bl,tl,c});
 			}
 		}
 		surfacearray[(int)Mesh.ArrayType.Vertex] = vertarray;
@@ -314,6 +403,44 @@ public partial class test : MeshInstance3D
 		st.GenerateNormals();
 		st.Commit(arraymesh);
 		this.Mesh = arraymesh;
+	}
+
+	void touch(InputEvent @event)
+	{
+		if (@event is InputEventMouseButton mouseEvent)
+		{
+			if (mouseEvent.Pressed)
+			{
+				doStuff();
+			}
+		}
+	}
+
+	void doStuff()
+	{
+		var cam = GetViewport().GetCamera3D();
+		var mousepos = GetViewport().GetMousePosition();
+		var raystart = cam.ProjectRayOrigin(mousepos);
+		var dir = cam.ProjectRayNormal(mousepos);
+		Vector3 closestvert = Vector3.Zero;
+		Vector3[] vertices = Mesh.GetFaces();
+		for (int i = 0; i < vertices.Length; i += 3)
+		{
+			Vector3 v0 = vertices[i];
+			Vector3 v1 = vertices[i + 1];
+			Vector3 v2 = vertices[i + 2];
+			var point = Geometry3D.RayIntersectsTriangle(ToLocal(raystart), ToLocal(dir), v0, v1, v2);
+			Vector3 pointpos = point.AsVector3();
+			var dist1 = v0.DistanceTo(pointpos);
+			var dist2 = v1.DistanceTo(pointpos);
+			var dist3 = v2.DistanceTo(pointpos);
+			var closest = Math.Min(Math.Min(dist1, dist2), dist3);
+			if (closest == dist1) closestvert = v0;
+			else if (closest == dist2) closestvert = v1;
+			else if (closest == dist3) closestvert = v2;
+
+		}
+		
 	}
 
 	public override void _Notification(int what)

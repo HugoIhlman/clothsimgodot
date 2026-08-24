@@ -39,7 +39,6 @@ mesh = SubResource("ArrayMesh_0xm2m")
 script = ExtResource("2_0xm2m")
 width = 32
 height = 32
-restDistance = 0.1
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2012327250]
 environment = SubResource("Environment_01dio")
