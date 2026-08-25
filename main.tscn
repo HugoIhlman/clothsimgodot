@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bl18m7mjjgx7j"]
 
-[ext_resource type="Script" uid="uid://cqtqxgp8s4obb" path="res://MeshInstance3d.cs" id="1_ig7tw"]
+[ext_resource type="Script" uid="uid://cqtqxgp8s4obb" path="res://goob.cs" id="1_ig7tw"]
 [ext_resource type="Script" uid="uid://c2a2720pwky5i" path="res://test.cs" id="2_0xm2m"]
 
 [sub_resource type="TorusMesh" id="TorusMesh_01dio"]
@@ -23,12 +23,11 @@ sky = SubResource("Sky_ig7tw")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=17923400]
 transform = Transform3D(1, 0, 0, 0, 0.7039964, -0.7102035, 0, 0.7102035, 0.7039964, 0, 0, 0)
-visible = false
 mesh = SubResource("TorusMesh_01dio")
 script = ExtResource("1_ig7tw")
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=613149522]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5670242, 2.5516977)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.062318, -22.27089, 34.45362)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1893750989]
 transform = Transform3D(1, 0, 0, 0, 0.7052059, 0.70900255, 0, -0.70900255, 0.7052059, 0, 10.104197, 0)

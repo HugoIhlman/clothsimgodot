@@ -18,6 +18,8 @@ public partial class test : MeshInstance3D
 	private Array vertices;
 	private Vector3 currentVert;
 	private Vector3 prevVert;
+
+	private int selectedVert = -1;
 	
 	private List<Vector3> pinnedVertices;
 	
@@ -33,6 +35,8 @@ public partial class test : MeshInstance3D
 	private RDUniform bendOffsetUniform;
 	private RDUniform bendDataUniform;
 	private MeshDataTool mdt;
+
+	private GpuVertex[] bert;
 
 	private List<uint>[] adjacencyMap;
 
@@ -288,6 +292,8 @@ public partial class test : MeshInstance3D
 		Vector3[] verts = (Vector3[])arrays[(int)Mesh.ArrayType.Vertex];
 		int vertcount = verts.Length;
 		
+		if(selectedVert >= 0) updateSelection();
+		
 		var computelist = rd.ComputeListBegin();
 		rd.ComputeListBindComputePipeline(computelist, pipeline);
 		rd.ComputeListBindUniformSet(computelist, activeset,0);
@@ -298,8 +304,8 @@ public partial class test : MeshInstance3D
 		rd.Submit();
 		rd.Sync();
 		var outputbytes = rd.BufferGetData(activebuffer);
-		GpuVertex[] updatedVertices = MemoryMarshal.Cast<byte, GpuVertex>(outputbytes).ToArray();
-		updateGeometry(updatedVertices);
+		bert = MemoryMarshal.Cast<byte, GpuVertex>(outputbytes).ToArray();
+		updateGeometry(bert);
 
 	}
 
@@ -405,42 +411,95 @@ public partial class test : MeshInstance3D
 		this.Mesh = arraymesh;
 	}
 
-	void touch(InputEvent @event)
+	public override void _Input(InputEvent @event)
 	{
 		if (@event is InputEventMouseButton mouseEvent)
 		{
-			if (mouseEvent.Pressed)
-			{
-				doStuff();
-			}
+			doStuff(mouseEvent);
 		}
 	}
 
-	void doStuff()
+	void doStuff(InputEventMouseButton pressed)
 	{
 		var cam = GetViewport().GetCamera3D();
 		var mousepos = GetViewport().GetMousePosition();
 		var raystart = cam.ProjectRayOrigin(mousepos);
 		var dir = cam.ProjectRayNormal(mousepos);
-		Vector3 closestvert = Vector3.Zero;
-		Vector3[] vertices = Mesh.GetFaces();
-		for (int i = 0; i < vertices.Length; i += 3)
+		Vector3 pos = Vector3.Zero;
+		var arrays = Mesh.SurfaceGetArrays(0);
+		int[] inds = (int[])arrays[(int)Mesh.ArrayType.Index];
+		Vector3[] verts = (Vector3[])arrays[(int)Mesh.ArrayType.Vertex];
+		if (pressed.IsPressed())
 		{
-			Vector3 v0 = vertices[i];
-			Vector3 v1 = vertices[i + 1];
-			Vector3 v2 = vertices[i + 2];
-			var point = Geometry3D.RayIntersectsTriangle(ToLocal(raystart), ToLocal(dir), v0, v1, v2);
-			Vector3 pointpos = point.AsVector3();
-			var dist1 = v0.DistanceTo(pointpos);
-			var dist2 = v1.DistanceTo(pointpos);
-			var dist3 = v2.DistanceTo(pointpos);
-			var closest = Math.Min(Math.Min(dist1, dist2), dist3);
-			if (closest == dist1) closestvert = v0;
-			else if (closest == dist2) closestvert = v1;
-			else if (closest == dist3) closestvert = v2;
-
+			for (int i = 2; i < inds.Length; i += 3)
+			{
+				Vector3 v0 = verts[inds[i]];
+				Vector3 v1 = verts[inds[i -1]];
+				Vector3 v2 = verts[inds[i-2]];
+				var point = Geometry3D.RayIntersectsTriangle(ToLocal(raystart), ToLocal(dir), v0, v1, v2);
+				if (!point.AsBool())
+				{
+					continue;
+				}
+				Vector3 pointpos = point.AsVector3();
+				var dist1 = v0.DistanceTo(pointpos);
+				var dist2 = v1.DistanceTo(pointpos);
+				var dist3 = v2.DistanceTo(pointpos);
+				var closest = Math.Min(Math.Min(dist1, dist2), dist3);
+				if (closest == dist1) selectedVert = inds[i];
+				else if (closest == dist2) selectedVert = inds[i -1];
+				else if (closest == dist3) selectedVert = inds[i -2];
+			}
+			if (selectedVert >= 0)
+			{
+				bert[selectedVert].Flags.X = 1f;
+			}
 		}
+		else if(pressed.IsReleased())
+		{
+			if (selectedVert >= 0)
+			{ 
+				bert[selectedVert].Flags.X = 0f;
+				selectedVert = -1;
+			}
+		}
+		updateVertexBuffer();
+		GD.Print(pos);
+	}
+
+	void updateSelection()
+	{
+		var cam = GetViewport().GetCamera3D();
+		var mousepos = GetViewport().GetMousePosition();
+		if (selectedVert >= 0)
+		{
+			var localpos = ToLocal((cam.ProjectPosition(mousepos,34.45f )) );
+			bert[selectedVert].Position.X = localpos.X;
+			bert[selectedVert].Position.Y = localpos.Y;
+		}
+		updateVertexBuffer();
+	}
+
+	void updateVertexBuffer()
+	{
+		byte[] inputbytes = MemoryMarshal.AsBytes(bert.AsSpan()).ToArray();
+		rd.BufferUpdate(vertbufferin, 0,(uint)inputbytes.Length, inputbytes);
+	}
+
+	public void drawSphere(Vector3 position, float radius)
+	{
+		var m = new MeshInstance3D();
+		var mesh = new SphereMesh();
 		
+		mesh.Radius = radius;
+		mesh.Height = radius * 2;
+
+		m.Mesh = mesh;
+		var material = new StandardMaterial3D();
+		material.AlbedoColor = Colors.Red;
+		m.MaterialOverride = material;
+		m.Position = position;
+		AddChild(m);
 	}
 
 	public override void _Notification(int what)

@@ -82,7 +82,7 @@ void main()
 	vec3 vel = (pos - prev) * 0.98; // velocity of v * damping
 	vec3 nextpos = pos + vel + (grav * params.dt * params.dt); 
 	
-	float alpha_s = 0.00001 / (params.dt * params.dt); //stretch constraint compliance
+	float alpha_s = 0.000001 / (params.dt * params.dt); //stretch constraint compliance
 	
 
 	NeighborOffset offsetinfo = neighbor_offsets.offsets[index];
@@ -120,8 +120,8 @@ void main()
 			vec3 grad = delta_vec / dist; //normalized delta
 			float diff = dist - n.restDistance; //current distance - allowed rest distance
 
-			float w_self = 0.5; //vertex v weight
-			float w_neighbor = (neighbor.flags.x > 0.5) ? 0.0 : 0.5;//neighbor weight, if is pinned it should be weightless and not influence vertex v
+			float w_self = 1.0; //vertex v weight
+			float w_neighbor = (neighbor.flags.x > 0.5) ? 0.0 : 1.0;//neighbor weight, if is pinned it should be weightless and not influence vertex v
 			float inv_mass_sum = w_self + w_neighbor; //add weights
 
 			float deltlagrgnmlt = -diff / (inv_mass_sum + alpha_s);//delta lagrangian multiplier
@@ -138,7 +138,7 @@ void main()
 		
 	}
 
-	float alpha_b = 0.001 / (params.dt * params.dt); //bend compliance
+	float alpha_b = 0.0001 / (params.dt * params.dt); //bend compliance
 	vec3 bendcorr = vec3(0,0,0);
 	int bendcount = 0;
 
@@ -167,8 +167,8 @@ void main()
 			vec3 grad = delta / dist;
 			float diff = dist - bn.restDistance;
 
-			float w_self = 0.5;
-			float w_neighbor = (neighbor.flags.x > 0.5) ? 0.0 : 0.5;
+			float w_self = 1.0;
+			float w_neighbor = (neighbor.flags.x > 0.5) ? 0.0 : 1.0;
 			float inv_mass_sum = w_self + w_neighbor;
 
 			float deltlagrgnmlt = -diff / (inv_mass_sum + alpha_b);
