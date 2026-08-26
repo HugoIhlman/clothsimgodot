@@ -58,6 +58,10 @@ layout(push_constant) uniform Params //input parameters
 	uint h;
 	float dt;
 	float rd;
+	uint pad;
+	float wind_x;
+	float wind_y;
+	float wind_z;
 } params;
 
 void main() 
@@ -81,6 +85,7 @@ void main()
 	
 	vec3 vel = (pos - prev) * 0.98; // velocity of v * damping
 	vec3 nextpos = pos + vel + (grav * params.dt * params.dt); 
+	nextpos += vec3(params.wind_x, params.wind_y, params.wind_z) * params.dt;
 	
 	float alpha_s = 0.000001 / (params.dt * params.dt); //stretch constraint compliance
 	

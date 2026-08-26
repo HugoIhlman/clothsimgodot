@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://cqtqxgp8s4obb" path="res://goob.cs" id="1_ig7tw"]
 [ext_resource type="Script" uid="uid://c2a2720pwky5i" path="res://test.cs" id="2_0xm2m"]
+[ext_resource type="Script" uid="uid://du58ti7w2710w" path="res://fpscounter.cs" id="3_h2yge"]
 
 [sub_resource type="TorusMesh" id="TorusMesh_01dio"]
 
@@ -18,6 +19,8 @@ sky_material = SubResource("ProceduralSkyMaterial_mxnru")
 [sub_resource type="Environment" id="Environment_01dio"]
 background_mode = 2
 sky = SubResource("Sky_ig7tw")
+
+[sub_resource type="SphereMesh" id="SphereMesh_01dio"]
 
 [node name="Node3D" type="Node3D" unique_id=1107290829]
 
@@ -41,3 +44,13 @@ height = 32
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2012327250]
 environment = SubResource("Environment_01dio")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="." unique_id=1585039323]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.1746092, 0, 0)
+mesh = SubResource("SphereMesh_01dio")
+
+[node name="Label" type="Label" parent="." unique_id=1492608816]
+offset_right = 40.0
+offset_bottom = 23.0
+text = "dadsdawdasd"
+script = ExtResource("3_h2yge")

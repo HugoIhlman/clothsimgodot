@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Godot.Collections;
 using Godot.NativeInterop;
 using Array = Godot.Collections.Array;
@@ -12,12 +13,20 @@ public partial class test : MeshInstance3D
 	[Export] public int width = 16;
 	[Export] public int height = 16;
 	[Export] public float restDistance = 0.2f;
+	[Export] public Vector3 wind = Vector3.Zero;
+	[Export] public float turbulence = 0.3f;
 
+	private ArrayMesh arrayMesh;
+	private bool meshDone = false;
+	private bool inProgress = false;
+	
 	private int divs = 0;
 	
 	private Array vertices;
 	private Vector3 currentVert;
 	private Vector3 prevVert;
+
+	private int[] _indices;
 
 	private int selectedVert = -1;
 	
@@ -56,6 +65,10 @@ public partial class test : MeshInstance3D
 		public uint height;
 		public float dt;
 		public float rd;
+		public uint pad;
+		public float wind_x;
+		public float wind_y;
+		public float wind_z;
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 16)]
@@ -92,6 +105,7 @@ public partial class test : MeshInstance3D
 			mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, surfaceArray);
 		}
 		mdt.CreateFromSurface(mesh, 0);
+		
 		
 		var GpuVerticies = new GpuVertex[mdt.GetVertexCount()];
 		for (int j = 0; j < mdt.GetVertexCount() ; j ++)
@@ -278,12 +292,23 @@ public partial class test : MeshInstance3D
 		Rid activeset = isevenframe ? uniformseta : uniformsetb;
 		Rid activebuffer = isevenframe ? vertbufferout : vertbufferin;
 		
+		var t = Time.GetTicksMsec() / 1000.0f;
+		var gust = new Vector3(
+			Mathf.Sin(t * 1.7f) + Mathf.Sin(t * 3.1f + 1.3f),
+			Mathf.Sin(t * 1.3f + 2.0f) + Mathf.Sin(t * 2.7f + 0.7f),
+			Mathf.Sin(t * 2.1f + 4.0f) + Mathf.Sin(t * 1.9f + 3.1f));
+		var eff_wind = wind + wind.Length() * gust * turbulence;
+		var local_wind = GlobalTransform.Basis.Inverse() * eff_wind;
 		GpuParams param = new GpuParams()
 		{
 			width = (uint) width,
 			height = (uint) height,
 			dt = 1f / 60f,
-			rd = restDistance
+			rd = restDistance,
+			pad = 0,
+			wind_x = local_wind.X,
+			wind_y = local_wind.Y,
+			wind_z = local_wind.Z
 		};
 		ReadOnlySpan<GpuParams> paramspan = MemoryMarshal.CreateReadOnlySpan(ref param, 1);
 		byte[] pushConstantsBytes = MemoryMarshal.AsBytes(paramspan).ToArray();
@@ -306,7 +331,6 @@ public partial class test : MeshInstance3D
 		var outputbytes = rd.BufferGetData(activebuffer);
 		bert = MemoryMarshal.Cast<byte, GpuVertex>(outputbytes).ToArray();
 		updateGeometry(bert);
-
 	}
 
 	private Array createSurfaceArray()
@@ -358,18 +382,19 @@ public partial class test : MeshInstance3D
 		{
 			for (int j = 0; j < divs; j++)
 			{
-				int index = i * (divs + 1) + j;
-				int tl = index;
-				int tr = index + 1;
-				int bl = index + (divs + 1) + 1;
-				int br = index + (divs + 1);
-				int c = centeridx[i, j];
+				int tl = i * (divs + 1) + j;
+				int tr = tl + 1;
+				int bl = tl + (divs + 1);
+				int br = bl + 1; 
+				int c = ((divs + 1) * (divs + 1)) + (i*divs+j);
 				indices.AddRange(new int[]{tl,tr,c,tr,br,c,br,bl,c,bl,tl,c});
 			}
 		}
 		surfaceArray[(int)Mesh.ArrayType.Vertex] = verts.ToArray();
 		surfaceArray[(int)Mesh.ArrayType.Index] = indices.ToArray();
 		surfaceArray[(int)Mesh.ArrayType.Normal] = normals.ToArray();
+		
+		 _indices = indices.ToArray();
 		
 		return surfaceArray;
 	}
@@ -381,28 +406,13 @@ public partial class test : MeshInstance3D
 		surfacearray.Resize((int)Mesh.ArrayType.Max);
 		int qc = divs * divs;
 		Vector3[] vertarray = new Vector3[vertices.Length + qc];
-		Vector3[] normalarray = new Vector3[vertices.Length + qc];
-		List<int> indices = [];
 		for (int i = 0; i < vertices.Length; i++)
 		{
-			vertarray[i] = new Vector3(vertices[i].Position.X , vertices[i].Position.Y, vertices[i].Position.Z);
-			normalarray[i] = Vector3.Up;
+			vertarray[i] = new Vector3(vertices[i].Position.X, vertices[i].Position.Y, vertices[i].Position.Z);
 		}
-		for (int y = 0; y < divs; y++)
-		{
-			for (int x = 0; x < divs; x++)
-			{
-				int tl = y * (divs + 1) + x;
-				int tr = tl + 1;
-				int bl = tl + (divs + 1);
-				int br = bl + 1;
-				int c = ((divs + 1) * (divs + 1)) + (y*divs+x);
-				indices.AddRange(new int[]{tl,tr,c,tr,br,c,br,bl,c,bl,tl,c});
-			}
-		}
+
 		surfacearray[(int)Mesh.ArrayType.Vertex] = vertarray;
-		surfacearray[(int)Mesh.ArrayType.Index] = indices.ToArray();
-		surfacearray[(int)Mesh.ArrayType.Normal] = normalarray;
+		surfacearray[(int)Mesh.ArrayType.Index] = _indices;
 		arraymesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, surfacearray);
 		var st = new SurfaceTool();
 		st.CreateFrom(arraymesh, 0);
@@ -417,6 +427,27 @@ public partial class test : MeshInstance3D
 		{
 			doStuff(mouseEvent);
 		}
+
+		if (@event is InputEventKey keyEvent)
+		{
+			if (keyEvent.Keycode == Key.R)
+			{
+				resetPinnedVertices();
+			}
+		}
+	}
+
+	void resetPinnedVertices()
+	{
+		for (int i = 0; i < bert.Length; i++)
+		{
+			var pos = new Vector3(bert[i].Position.X, bert[i].Position.Y, bert[i].Position.Z);
+			if (!pinnedVertices.Contains(pos))
+			{
+				bert[i].Flags.X = 0f;
+			}
+		}
+		updateVertexBuffer();
 	}
 
 	void doStuff(InputEventMouseButton pressed)
