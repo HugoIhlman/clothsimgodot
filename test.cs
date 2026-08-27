@@ -15,6 +15,7 @@ public partial class test : MeshInstance3D
 	[Export] public float restDistance = 0.2f;
 	[Export] public Vector3 wind = Vector3.Zero;
 	[Export] public float turbulence = 0.3f;
+	[Export] public clothCollider Collider;
 
 	private ArrayMesh arrayMesh;
 	private bool meshDone = false;
@@ -39,6 +40,7 @@ public partial class test : MeshInstance3D
 	private Rid uniformseta;
 	private Rid uniformsetb;
 	private Rid pipeline;
+	private Rid colliders;
 	private RDUniform offsetUniform;
 	private RDUniform dataUniform;
 	private RDUniform bendOffsetUniform;
@@ -144,8 +146,17 @@ public partial class test : MeshInstance3D
 		
 		InitAdjacencyBuffers(mesh);
 		InitBendingBuffers(mesh);
+
+		var colliderData = Collider.PackColliderData(GlobalTransform.AffineInverse());
+		byte[] colliderByteData = MemoryMarshal.AsBytes(colliderData.AsSpan()).ToArray();
+		colliders = rd.StorageBufferCreate((uint)colliderByteData.Length, colliderByteData);
+		var cuniform = new RDUniform
+		{
+			UniformType =  RenderingDevice.UniformType.StorageBuffer, Binding = 6
+		};
+		cuniform.AddId(colliders);
 		
-		uniformseta = rd.UniformSetCreate([vuniformina,vuniformoutb, offsetUniform, dataUniform, bendOffsetUniform, bendDataUniform ], shader, 0);
+		uniformseta = rd.UniformSetCreate([vuniformina,vuniformoutb, offsetUniform, dataUniform, bendOffsetUniform, bendDataUniform, cuniform ], shader, 0);
 		var vuniforminb = new RDUniform
 		{
 			UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 0
@@ -156,7 +167,7 @@ public partial class test : MeshInstance3D
 		};
 		vuniforminb.AddId(vertbufferout);
 		vuniformouta.AddId(vertbufferin);
-		uniformsetb = rd.UniformSetCreate([vuniforminb,vuniformouta, offsetUniform, dataUniform, bendOffsetUniform, bendDataUniform ], shader, 0);
+		uniformsetb = rd.UniformSetCreate([vuniforminb,vuniformouta, offsetUniform, dataUniform, bendOffsetUniform, bendDataUniform, cuniform ], shader, 0);
 		pipeline = rd.ComputePipelineCreate(shader);
 	}
 
@@ -449,6 +460,7 @@ public partial class test : MeshInstance3D
 		}
 		updateVertexBuffer();
 	}
+	
 
 	void doStuff(InputEventMouseButton pressed)
 	{

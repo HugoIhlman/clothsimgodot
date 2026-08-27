@@ -50,6 +50,9 @@ layout(set = 0, binding = 4, std430) restrict buffer BendOffsets{
 layout(set = 0, binding = 5, std430) restrict buffer BendData{
 	BendNeighbor data[];
 } bend_data;//neigbor data for opposite neighbors
+layout(set = 0, binding = 6, std430) restrict buffer Colliders{
+	vec4 colliders[];
+} colliders;
 
 
 layout(push_constant) uniform Params //input parameters
@@ -83,13 +86,15 @@ void main()
 	vec3 pos = v.pos.xyz;
 	vec3 prev = v.prevPos.xyz;
 	
+	
+	
 	vec3 vel = (pos - prev) * 0.98; // velocity of v * damping
 	vec3 nextpos = pos + vel + (grav * params.dt * params.dt); 
 	nextpos += vec3(params.wind_x, params.wind_y, params.wind_z) * params.dt;
 	
 	float alpha_s = 0.000001 / (params.dt * params.dt); //stretch constraint compliance
 	
-
+	 
 	NeighborOffset offsetinfo = neighbor_offsets.offsets[index];
 	uint start = offsetinfo.startIndex; 
 	uint totalneighbors = offsetinfo.count;
@@ -185,6 +190,21 @@ void main()
 	{
 		nextpos += bendcorr / float(bendcount);
 	}
+
+	vec3 a = colliders.colliders[0].xyz;
+	vec3 b = colliders.colliders[1].xyz;
+	float radius = colliders.colliders[0].w;
+	vec3 ab = b - a;
+	float ab2 = dot(ab,ab);
+
+	float t = (ab2 > 1e-12) ? clamp(dot(nextpos - a, ab) / ab2, 0.0, 1.0) : 0.0;
+	vec3 closest = a + ab * t;
+	vec3 difference = nextpos - closest;
+	float distance = length(difference);
+	if(distance < radius && distance > 1e-7){
+		nextpos = closest + (difference / distance) * (radius);
+	}
+	
 	v.prevPos.xyz = pos;
 	v.pos.xyz = nextpos;
 	vertex_buffer_out.verticies[index] = v;

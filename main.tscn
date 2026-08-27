@@ -1,10 +1,8 @@
 [gd_scene format=3 uid="uid://bl18m7mjjgx7j"]
 
-[ext_resource type="Script" uid="uid://cqtqxgp8s4obb" path="res://goob.cs" id="1_ig7tw"]
 [ext_resource type="Script" uid="uid://c2a2720pwky5i" path="res://test.cs" id="2_0xm2m"]
+[ext_resource type="Script" uid="uid://pq2xy4t0g702" path="res://clothCollider.cs" id="2_h2yge"]
 [ext_resource type="Script" uid="uid://du58ti7w2710w" path="res://fpscounter.cs" id="3_h2yge"]
-
-[sub_resource type="TorusMesh" id="TorusMesh_01dio"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lao8o"]
 cull_mode = 2
@@ -21,13 +19,10 @@ background_mode = 2
 sky = SubResource("Sky_ig7tw")
 
 [sub_resource type="SphereMesh" id="SphereMesh_01dio"]
+radius = 2.8
+height = 5.6
 
 [node name="Node3D" type="Node3D" unique_id=1107290829]
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=17923400]
-transform = Transform3D(1, 0, 0, 0, 0.7039964, -0.7102035, 0, 0.7102035, 0.7039964, 0, 0, 0)
-mesh = SubResource("TorusMesh_01dio")
-script = ExtResource("1_ig7tw")
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=613149522]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.062318, -22.27089, 34.45362)
@@ -35,19 +30,23 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.062318, -22.27089, 34.45362
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1893750989]
 transform = Transform3D(1, 0, 0, 0, 0.7052059, 0.70900255, 0, -0.70900255, 0.7052059, 0, 10.104197, 0)
 
-[node name="MeshInstance3D2" type="MeshInstance3D" parent="." unique_id=1185474716]
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="." unique_id=1185474716 node_paths=PackedStringArray("Collider")]
 material_override = SubResource("StandardMaterial3D_lao8o")
 mesh = SubResource("ArrayMesh_0xm2m")
 script = ExtResource("2_0xm2m")
 width = 32
 height = 32
+wind = Vector3(0, 0, -0.1)
+Collider = NodePath("../MeshInstance3D3")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2012327250]
 environment = SubResource("Environment_01dio")
 
 [node name="MeshInstance3D3" type="MeshInstance3D" parent="." unique_id=1585039323]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.1746092, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.102372, -9.679382, -13.941502)
 mesh = SubResource("SphereMesh_01dio")
+script = ExtResource("2_h2yge")
+radius = 3.0
 
 [node name="Label" type="Label" parent="." unique_id=1492608816]
 offset_right = 40.0
