@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://cxeywul1e8ptr"]
+
+[ext_resource type="Script" uid="uid://pq2xy4t0g702" path="res://clothCollider.cs" id="1_xpnb8"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_01dio"]
+radius = 3.0
+height = 6.0
+
+[node name="RigidBody3D" type="RigidBody3D" unique_id=1625326896]
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="." unique_id=89943011]
+mesh = SubResource("SphereMesh_01dio")
+script = ExtResource("1_xpnb8")
+radius = 3.0

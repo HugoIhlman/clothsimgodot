@@ -15,7 +15,9 @@ public partial class test : MeshInstance3D
 	[Export] public float restDistance = 0.2f;
 	[Export] public Vector3 wind = Vector3.Zero;
 	[Export] public float turbulence = 0.3f;
-	[Export] public clothCollider Collider;
+	[Export] public PackedScene colliderprefab {get; set;}
+
+	private List<clothCollider> _colliders = [];
 
 	private ArrayMesh arrayMesh;
 	private bool meshDone = false;
@@ -50,6 +52,7 @@ public partial class test : MeshInstance3D
 	private GpuVertex[] bert;
 
 	private List<uint>[] adjacencyMap;
+	
 
 	[StructLayout(LayoutKind.Sequential, Pack = 16)]
 	struct GpuVertex
@@ -67,7 +70,7 @@ public partial class test : MeshInstance3D
 		public uint height;
 		public float dt;
 		public float rd;
-		public uint pad;
+		public uint collidercount;
 		public float wind_x;
 		public float wind_y;
 		public float wind_z;
@@ -147,9 +150,11 @@ public partial class test : MeshInstance3D
 		InitAdjacencyBuffers(mesh);
 		InitBendingBuffers(mesh);
 
-		var colliderData = Collider.PackColliderData(GlobalTransform.AffineInverse());
-		byte[] colliderByteData = MemoryMarshal.AsBytes(colliderData.AsSpan()).ToArray();
-		colliders = rd.StorageBufferCreate((uint)colliderByteData.Length, colliderByteData);
+		findColliders(GetParent());
+
+
+		byte[] colliderByteData = updateColliderCount();
+		colliders = rd.StorageBufferCreate((uint)colliderByteData.Length * 4, null);
 		var cuniform = new RDUniform
 		{
 			UniformType =  RenderingDevice.UniformType.StorageBuffer, Binding = 6
@@ -299,6 +304,10 @@ public partial class test : MeshInstance3D
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
+		if (_colliders.Count > 3)
+		{
+			deleteElderCollider();
+		}
 		bool isevenframe = (Engine.GetFramesDrawn() % 2 == 0);
 		Rid activeset = isevenframe ? uniformseta : uniformsetb;
 		Rid activebuffer = isevenframe ? vertbufferout : vertbufferin;
@@ -316,7 +325,7 @@ public partial class test : MeshInstance3D
 			height = (uint) height,
 			dt = 1f / 60f,
 			rd = restDistance,
-			pad = 0,
+			collidercount = (uint)_colliders.Count,
 			wind_x = local_wind.X,
 			wind_y = local_wind.Y,
 			wind_z = local_wind.Z
@@ -342,6 +351,7 @@ public partial class test : MeshInstance3D
 		var outputbytes = rd.BufferGetData(activebuffer);
 		bert = MemoryMarshal.Cast<byte, GpuVertex>(outputbytes).ToArray();
 		updateGeometry(bert);
+		updateColliders();
 	}
 
 	private Array createSurfaceArray()
@@ -432,6 +442,54 @@ public partial class test : MeshInstance3D
 		this.Mesh = arraymesh;
 	}
 
+	private byte[] updateColliderCount()
+	{
+		_colliders.Clear();
+		findColliders(GetParent());
+		int colliderCount = _colliders.Count;
+		int write_index = 0;
+		byte[] data = new byte[colliderCount * 64];
+		for (int i = 0; i < colliderCount; i++)
+		{
+			var colliderData = _colliders[i].PackColliderData(GlobalTransform.AffineInverse());
+			var byteData = MemoryMarshal.AsBytes(colliderData.AsSpan()).ToArray();
+			var offset = write_index * 64;
+			for (int j = 0; j < 64; j++)
+			{
+				data[offset + j] = byteData[j];
+			}
+			write_index++;
+		}
+		return data;
+	}
+
+	void updateColliders()
+	{
+		var data = updateColliderCount();
+		rd.BufferUpdate(colliders, 0, (uint)data.Length, data);
+	}
+
+	void deleteElderCollider()
+	{
+		var col =  _colliders[0];
+		_colliders.Remove(col);
+		col.GetParent().Free();
+		updateColliders();
+	}
+
+	private void findColliders(Node node)
+	{
+		if (node is clothCollider)
+		{
+			_colliders.Add(node as clothCollider);
+		}
+		foreach (var child in node.GetChildren())
+		{
+			findColliders(child);
+		}
+		
+	}
+
 	public override void _Input(InputEvent @event)
 	{
 		if (@event is InputEventMouseButton mouseEvent)
@@ -445,7 +503,29 @@ public partial class test : MeshInstance3D
 			{
 				resetPinnedVertices();
 			}
+			if (keyEvent.Keycode == Key.Space)
+			{
+				if (keyEvent.IsReleased())
+				{
+					shootBall();
+				}
+			}
 		}
+	}
+
+	void shootBall()
+	{
+		var cam = GetViewport().GetCamera3D();
+		var mousepos = GetViewport().GetMousePosition();
+		var raystart = cam.ProjectRayOrigin(mousepos);
+		var dir = cam.ProjectRayNormal(mousepos);
+		Node ball = colliderprefab.Instantiate();
+		GetParent().AddChild(ball);
+		var b = ball as RigidBody3D;
+		var t = ball as Node3D;
+		t.Position = raystart;
+		b.ApplyImpulse(dir * 40f);
+		updateColliderCount();
 	}
 
 	void resetPinnedVertices()

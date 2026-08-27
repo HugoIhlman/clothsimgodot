@@ -61,7 +61,7 @@ layout(push_constant) uniform Params //input parameters
 	uint h;
 	float dt;
 	float rd;
-	uint pad;
+	uint colliderCount;
 	float wind_x;
 	float wind_y;
 	float wind_z;
@@ -190,20 +190,26 @@ void main()
 	{
 		nextpos += bendcorr / float(bendcount);
 	}
+	
+	for(int c = 0; c < params.colliderCount; c++)
+	{
+		vec3 a = colliders.colliders[c * 4].xyz;
+		vec3 b = colliders.colliders[c * 4 + 1].xyz;
+		float margin = 1.05;
+		float radius = colliders.colliders[c * 4].w * margin;
+		vec3 ab = b - a;
+		float ab2 = dot(ab, ab);
 
-	vec3 a = colliders.colliders[0].xyz;
-	vec3 b = colliders.colliders[1].xyz;
-	float radius = colliders.colliders[0].w;
-	vec3 ab = b - a;
-	float ab2 = dot(ab,ab);
-
-	float t = (ab2 > 1e-12) ? clamp(dot(nextpos - a, ab) / ab2, 0.0, 1.0) : 0.0;
-	vec3 closest = a + ab * t;
-	vec3 difference = nextpos - closest;
-	float distance = length(difference);
-	if(distance < radius && distance > 1e-7){
-		nextpos = closest + (difference / distance) * (radius);
+		float t = (ab2 > 1e-12) ? clamp(dot(nextpos - a, ab) / ab2, 0.0, 1.0) : 0.0;
+		vec3 closest = a + ab * t;
+		vec3 difference = nextpos - closest;
+		float distance = length(difference);
+		if (distance < radius && distance > 1e-7){
+			nextpos = closest + (difference / distance) * (radius);
+		}
 	}
+	
+	
 	
 	v.prevPos.xyz = pos;
 	v.pos.xyz = nextpos;
