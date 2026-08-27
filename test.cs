@@ -29,6 +29,8 @@ public partial class test : MeshInstance3D
 	private Vector3 currentVert;
 	private Vector3 prevVert;
 
+	private Vector2[] uvs;
+
 	private int[] _indices;
 
 	private int selectedVert = -1;
@@ -360,8 +362,8 @@ public partial class test : MeshInstance3D
 		surfaceArray.Resize((int)Mesh.ArrayType.Max);
 
 		List<Vector3> verts = [];
-		List<Vector2> uvs = [];
 		List<Vector3> normals = [];
+		List<Vector2> uv = [];
 		List<int> indices = [];
 		float side = width / divs;
 		pinnedVertices = new List<Vector3>();
@@ -399,6 +401,11 @@ public partial class test : MeshInstance3D
 			}
 		}
 
+		foreach (var e in verts)
+		{
+			uv.Add(new Vector2(e.X / width, 1 - (e.Z / width)));
+		}
+
 		for (int i = 0; i < divs; i++)
 		{
 			for (int j = 0; j < divs; j++)
@@ -414,8 +421,15 @@ public partial class test : MeshInstance3D
 		surfaceArray[(int)Mesh.ArrayType.Vertex] = verts.ToArray();
 		surfaceArray[(int)Mesh.ArrayType.Index] = indices.ToArray();
 		surfaceArray[(int)Mesh.ArrayType.Normal] = normals.ToArray();
+		surfaceArray[(int)Mesh.ArrayType.TexUV] = uv.ToArray();
 		
 		 _indices = indices.ToArray();
+		 
+		 uvs = new Vector2[verts.Count + (divs * divs)];
+		 for (int i = 0; i < verts.Count; i++)
+		 {
+			 uvs[i] = new Vector2(uv[i].X, uv[i].Y);
+		 }
 		
 		return surfaceArray;
 	}
@@ -431,9 +445,11 @@ public partial class test : MeshInstance3D
 		{
 			vertarray[i] = new Vector3(vertices[i].Position.X, vertices[i].Position.Y, vertices[i].Position.Z);
 		}
+		
 
 		surfacearray[(int)Mesh.ArrayType.Vertex] = vertarray;
 		surfacearray[(int)Mesh.ArrayType.Index] = _indices;
+		surfacearray[(int)Mesh.ArrayType.TexUV] = uvs;
 		arraymesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, surfacearray);
 		var st = new SurfaceTool();
 		st.CreateFrom(arraymesh, 0);

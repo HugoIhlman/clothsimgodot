@@ -1,11 +1,13 @@
 [gd_scene format=3 uid="uid://bl18m7mjjgx7j"]
 
+[ext_resource type="Texture2D" uid="uid://baf0ff22ud6vq" path="res://icon.svg" id="1_1bvp3"]
 [ext_resource type="Script" uid="uid://c2a2720pwky5i" path="res://test.cs" id="2_0xm2m"]
 [ext_resource type="PackedScene" uid="uid://cxeywul1e8ptr" path="res://colliderPrefab.tscn" id="2_h2yge"]
 [ext_resource type="Script" uid="uid://du58ti7w2710w" path="res://fpscounter.cs" id="3_h2yge"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lao8o"]
 cull_mode = 2
+albedo_texture = ExtResource("1_1bvp3")
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_0xm2m"]
 
