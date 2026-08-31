@@ -23,7 +23,7 @@ sky = SubResource("Sky_ig7tw")
 [node name="Node3D" type="Node3D" unique_id=1107290829]
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=613149522]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.062318, -22.27089, 34.45362)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.172128, -22.27089, 34.45362)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1893750989]
 transform = Transform3D(1, 0, 0, 0, 0.7052059, 0.70900255, 0, -0.70900255, 0.7052059, 0, 10.104197, 0)

@@ -651,6 +651,7 @@ public partial class test : MeshInstance3D
 			rd.FreeRid(pipeline);
 			rd.FreeRid(vertbufferin);
 			rd.FreeRid(vertbufferout);
+			rd.FreeRid(colliders);
 		}
 	}
 }
