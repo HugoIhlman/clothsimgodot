@@ -1,0 +1,40 @@
+[gd_scene format=3 uid="uid://dsci42rlyqjnn"]
+
+[ext_resource type="Script" uid="uid://dy0j20ecb3q3x" path="res://vr_instance.gd" id="1_nwne2"]
+[ext_resource type="Script" uid="uid://pq2xy4t0g702" path="res://clothCollider.cs" id="2_cdi1f"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_01dio"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_01dio"]
+radius = 0.05
+height = 0.1
+
+[sub_resource type="SphereMesh" id="SphereMesh_ka64m"]
+radius = 0.05
+height = 0.1
+
+[node name="VRInstance" type="XROrigin3D" unique_id=811417445 node_paths=PackedStringArray("camera", "left_hand", "right_hand")]
+script = ExtResource("1_nwne2")
+camera = NodePath("XRCamera3D")
+left_hand = NodePath("XRController3D")
+right_hand = NodePath("XRController3D2")
+body_shape = SubResource("CapsuleShape3D_01dio")
+metadata/_custom_type_script = "uid://dy0j20ecb3q3x"
+
+[node name="XRCamera3D" type="XRCamera3D" parent="." unique_id=1918991277]
+
+[node name="XRController3D" type="XRController3D" parent="." unique_id=1661327422]
+tracker = &"left_hand"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="XRController3D" unique_id=877413438]
+mesh = SubResource("SphereMesh_01dio")
+script = ExtResource("2_cdi1f")
+radius = 0.05
+
+[node name="XRController3D2" type="XRController3D" parent="." unique_id=1175021049]
+tracker = &"right_hand"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="XRController3D2" unique_id=2065783169]
+mesh = SubResource("SphereMesh_ka64m")
+script = ExtResource("2_cdi1f")
+radius = 0.05

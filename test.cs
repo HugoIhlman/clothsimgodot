@@ -371,7 +371,7 @@ public partial class test : MeshInstance3D
 		{
 			for (int x = 0; x < divs + 1; x++)
 			{
-				Vector3 pos = new Vector3(x * side, 0, y * -side );
+				Vector3 pos = new Vector3((x * side) * restDistance, 0, (y * -side) * restDistance );
 				if (y == 0)
 				{
 					pinnedVertices.Add(pos);

@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://c2a2720pwky5i" path="res://test.cs" id="2_0xm2m"]
 [ext_resource type="PackedScene" uid="uid://cxeywul1e8ptr" path="res://colliderPrefab.tscn" id="2_h2yge"]
 [ext_resource type="Script" uid="uid://du58ti7w2710w" path="res://fpscounter.cs" id="3_h2yge"]
+[ext_resource type="PackedScene" uid="uid://dsci42rlyqjnn" path="res://vr_instance.tscn" id="5_lquwl"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lao8o"]
 cull_mode = 2
@@ -20,6 +21,13 @@ sky_material = SubResource("ProceduralSkyMaterial_mxnru")
 background_mode = 2
 sky = SubResource("Sky_ig7tw")
 
+[sub_resource type="SphereShape3D" id="SphereShape3D_01dio"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_01dio"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_7mycd"]
+size = Vector3(2, 0.001, 2)
+
 [node name="Node3D" type="Node3D" unique_id=1107290829]
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=613149522]
@@ -29,11 +37,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.172128, -22.27089, 34.4536
 transform = Transform3D(1, 0, 0, 0, 0.7052059, 0.70900255, 0, -0.70900255, 0.7052059, 0, 10.104197, 0)
 
 [node name="MeshInstance3D2" type="MeshInstance3D" parent="." unique_id=1185474716]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 16.834133, 0)
 material_override = SubResource("StandardMaterial3D_lao8o")
 mesh = SubResource("ArrayMesh_0xm2m")
 script = ExtResource("2_0xm2m")
-width = 32
-height = 32
+restDistance = 1.0
 wind = Vector3(0, 0, -0.1)
 colliderprefab = ExtResource("2_h2yge")
 
@@ -47,3 +55,22 @@ text = "dadsdawdasd"
 script = ExtResource("3_h2yge")
 
 [node name="RigidBody3D" parent="." unique_id=1625326896 instance=ExtResource("2_h2yge")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.0722065, 4.5442014, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D" unique_id=173005232]
+transform = Transform3D(6.025, 0, 0, 0, 6.025, 0, 0, 0, 6.025, 0, 0, 0)
+shape = SubResource("SphereShape3D_01dio")
+
+[node name="VRInstance" parent="." unique_id=811417445 instance=ExtResource("5_lquwl")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 5, 14.323254)
+
+[node name="StaticBody3D" type="StaticBody3D" parent="." unique_id=617418196]
+transform = Transform3D(36.14, 0, 0, 0, 36.14, 0, 0, 0, 36.14, 0, 0, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D" unique_id=1784527414]
+transform = Transform3D(0.99999994, 0, 0, 0, 0.99999994, 0, 0, 0, 0.99999994, 0, 0, 0)
+mesh = SubResource("PlaneMesh_01dio")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D" unique_id=1004277863]
+transform = Transform3D(0.99999994, 0, 0, 0, 0.99999994, 0, 0, 0, 0.99999994, 0, 0, 0)
+shape = SubResource("BoxShape3D_7mycd")
