@@ -51,7 +51,7 @@ func _ready() -> void:
 	PhysicsServer3D.body_set_space(body_rid, get_world_3d().space)
 	PhysicsServer3D.body_set_mode(body_rid, PhysicsServer3D.BODY_MODE_KINEMATIC)
 	PhysicsServer3D.body_add_shape(body_rid, body_shape.get_rid(), Transform3D.IDENTITY)
-	PhysicsServer3D.body_set_collision_layer(body_rid, 1)
+	PhysicsServer3D.body_set_collision_layer(body_rid, 2)
 	PhysicsServer3D.body_set_collision_mask(body_rid, 1)
 	
 	parameters.margin = 0.04
@@ -80,6 +80,7 @@ func _physics_process(delta: float) -> void:
 	velocity.x = target_velocity.x
 	velocity.z = target_velocity.z
 	acceleration.y += GRAVITY
+	
 	
 	_move_and_slide(delta)
 

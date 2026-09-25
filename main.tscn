@@ -5,6 +5,9 @@
 [ext_resource type="PackedScene" uid="uid://cxeywul1e8ptr" path="res://colliderPrefab.tscn" id="2_h2yge"]
 [ext_resource type="Script" uid="uid://du58ti7w2710w" path="res://fpscounter.cs" id="3_h2yge"]
 [ext_resource type="PackedScene" uid="uid://dsci42rlyqjnn" path="res://vr_instance.tscn" id="5_lquwl"]
+[ext_resource type="Script" uid="uid://pq2xy4t0g702" path="res://clothCollider.cs" id="6_7mycd"]
+[ext_resource type="Texture2D" uid="uid://6na60flxw4tj" path="res://nick.png" id="7_272bh"]
+[ext_resource type="Script" uid="uid://oxg32r6q157b" path="res://grabbable.gd" id="8_5vw27"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lao8o"]
 cull_mode = 2
@@ -28,6 +31,22 @@ sky = SubResource("Sky_ig7tw")
 [sub_resource type="BoxShape3D" id="BoxShape3D_7mycd"]
 size = Vector3(2, 0.001, 2)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_272bh"]
+albedo_texture = ExtResource("7_272bh")
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_01dio"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_ka64m"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_01dio"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ka64m"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_ka64m"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_01dio"]
+size = Vector3(1, 10, 1)
+
 [node name="Node3D" type="Node3D" unique_id=1107290829]
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=613149522]
@@ -37,11 +56,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.172128, -22.27089, 34.4536
 transform = Transform3D(1, 0, 0, 0, 0.7052059, 0.70900255, 0, -0.70900255, 0.7052059, 0, 10.104197, 0)
 
 [node name="MeshInstance3D2" type="MeshInstance3D" parent="." unique_id=1185474716]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 16.834133, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.9266415, 0)
 material_override = SubResource("StandardMaterial3D_lao8o")
 mesh = SubResource("ArrayMesh_0xm2m")
 script = ExtResource("2_0xm2m")
-restDistance = 1.0
+restDistance = 0.5
 wind = Vector3(0, 0, -0.1)
 colliderprefab = ExtResource("2_h2yge")
 
@@ -70,7 +89,70 @@ transform = Transform3D(36.14, 0, 0, 0, 36.14, 0, 0, 0, 36.14, 0, 0, 0)
 [node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D" unique_id=1784527414]
 transform = Transform3D(0.99999994, 0, 0, 0, 0.99999994, 0, 0, 0, 0.99999994, 0, 0, 0)
 mesh = SubResource("PlaneMesh_01dio")
+script = ExtResource("6_7mycd")
+shape = 1
+extents = Vector3(200, 0.1, 200)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D" unique_id=1004277863]
 transform = Transform3D(0.99999994, 0, 0, 0, 0.99999994, 0, 0, 0, 0.99999994, 0, 0, 0)
 shape = SubResource("BoxShape3D_7mycd")
+
+[node name="RigidBody3D2" type="RigidBody3D" parent="." unique_id=621642900]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.101729, 5.0395613, 8.5003)
+axis_lock_angular_y = true
+mass = 0.025
+continuous_cd = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RigidBody3D2" unique_id=83618008]
+transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, 0, 0, 0)
+material_override = SubResource("StandardMaterial3D_272bh")
+mesh = SubResource("CapsuleMesh_01dio")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D2" unique_id=2100268578]
+transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, 0, 0, 0)
+shape = SubResource("CapsuleShape3D_ka64m")
+
+[node name="Generic6DOFJoint3D" type="Generic6DOFJoint3D" parent="RigidBody3D2" unique_id=978423526]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3, 0)
+node_a = NodePath("..")
+node_b = NodePath("../../StaticBody3D")
+exclude_nodes_from_collision = false
+angular_limit_x/enabled = false
+angular_limit_y/enabled = false
+angular_limit_z/enabled = false
+angular_spring_x/enabled = true
+angular_spring_x/stiffness = 5.0
+angular_spring_z/enabled = true
+angular_spring_z/stiffness = 5.0
+
+[node name="RigidBody3D3" type="RigidBody3D" parent="." unique_id=1670040498]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.404902, 2.7961588, 23.886084)
+mass = 20.0
+script = ExtResource("8_5vw27")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RigidBody3D3" unique_id=760035073]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0)
+mesh = SubResource("BoxMesh_01dio")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D3" unique_id=168292922]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0)
+shape = SubResource("BoxShape3D_ka64m")
+
+[node name="RigidBody3D4" type="RigidBody3D" parent="." unique_id=988182692]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.320946, 4.982955, 15.414488)
+script = ExtResource("8_5vw27")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RigidBody3D4" unique_id=1389664435]
+transform = Transform3D(1, 0, 0, 0, 10, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("BoxMesh_ka64m")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D4" unique_id=1763254921]
+shape = SubResource("BoxShape3D_01dio")
+
+[node name="HingeJoint3D" type="HingeJoint3D" parent="RigidBody3D4" unique_id=1278051310]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -5.058025, 0)
+node_a = NodePath("..")
+node_b = NodePath("../../StaticBody3D")
+angular_limit/enable = true
+angular_limit/upper = 0.7853982
+angular_limit/lower = -0.7853982

@@ -111,6 +111,7 @@ public partial class test : MeshInstance3D
 			var surfaceArray = createSurfaceArray();
 			mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, surfaceArray);
 		}
+		
 		mdt.CreateFromSurface(mesh, 0);
 		
 		
@@ -122,13 +123,13 @@ public partial class test : MeshInstance3D
 			GpuVerticies[j].Position = new Vector4(position.X, position.Y, position.Z, 1f);
 			GpuVerticies[j].Normal = new Vector4(normal.X, normal.Y, normal.Z, 1f);
 			GpuVerticies[j].PrevPosition =  new Vector4(position.X, position.Y, position.Z, 1f);
-
+			
 			if (pinnedVertices.Contains(position))
-			{
+			{ 
 				GpuVerticies[j].Flags = new Vector4(1,0,0,1);
 			}
 			else
-			{
+			{ 
 				GpuVerticies[j].Flags = new Vector4(0,0,0,1);
 			}
 			
@@ -308,7 +309,7 @@ public partial class test : MeshInstance3D
 	{
 		if (_colliders.Count > 3)
 		{
-			deleteElderCollider();
+			//deleteElderCollider();
 		}
 		bool isevenframe = (Engine.GetFramesDrawn() % 2 == 0);
 		Rid activeset = isevenframe ? uniformseta : uniformsetb;

@@ -2,23 +2,31 @@
 
 [ext_resource type="Script" uid="uid://dy0j20ecb3q3x" path="res://vr_instance.gd" id="1_nwne2"]
 [ext_resource type="Script" uid="uid://pq2xy4t0g702" path="res://clothCollider.cs" id="2_cdi1f"]
+[ext_resource type="Script" uid="uid://cidlx3dbt1yy0" path="res://hand_phys.gd" id="2_qh0ur"]
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_01dio"]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_qh0ur"]
 
-[sub_resource type="SphereMesh" id="SphereMesh_01dio"]
-radius = 0.05
-height = 0.1
+[sub_resource type="SphereShape3D" id="SphereShape3D_01dio"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qh0ur"]
+albedo_color = Color(1, 0, 0, 1)
 
 [sub_resource type="SphereMesh" id="SphereMesh_ka64m"]
-radius = 0.05
-height = 0.1
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_e0xfu"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2uoy3"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_01dio"]
 
 [node name="VRInstance" type="XROrigin3D" unique_id=811417445 node_paths=PackedStringArray("camera", "left_hand", "right_hand")]
+world_scale = 5.0
 script = ExtResource("1_nwne2")
 camera = NodePath("XRCamera3D")
 left_hand = NodePath("XRController3D")
 right_hand = NodePath("XRController3D2")
-body_shape = SubResource("CapsuleShape3D_01dio")
+body_shape = SubResource("CapsuleShape3D_qh0ur")
 metadata/_custom_type_script = "uid://dy0j20ecb3q3x"
 
 [node name="XRCamera3D" type="XRCamera3D" parent="." unique_id=1918991277]
@@ -26,15 +34,37 @@ metadata/_custom_type_script = "uid://dy0j20ecb3q3x"
 [node name="XRController3D" type="XRController3D" parent="." unique_id=1661327422]
 tracker = &"left_hand"
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="XRController3D" unique_id=877413438]
-mesh = SubResource("SphereMesh_01dio")
-script = ExtResource("2_cdi1f")
-radius = 0.05
-
 [node name="XRController3D2" type="XRController3D" parent="." unique_id=1175021049]
 tracker = &"right_hand"
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="XRController3D2" unique_id=2065783169]
+[node name="LeftHandPhys" type="CharacterBody3D" parent="." unique_id=784814025 node_paths=PackedStringArray("controller")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.06)
+top_level = true
+collision_layer = 2
+script = ExtResource("2_qh0ur")
+controller = NodePath("../XRController3D")
+push_force = 1.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="LeftHandPhys" unique_id=430667166]
+shape = SubResource("SphereShape3D_01dio")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="LeftHandPhys" unique_id=2065783169]
+material_override = SubResource("StandardMaterial3D_qh0ur")
 mesh = SubResource("SphereMesh_ka64m")
 script = ExtResource("2_cdi1f")
-radius = 0.05
+
+[node name="RightHandPhys" type="CharacterBody3D" parent="." unique_id=1716008038 node_paths=PackedStringArray("controller")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.06)
+top_level = true
+collision_layer = 2
+script = ExtResource("2_qh0ur")
+controller = NodePath("../XRController3D2")
+push_force = 1.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RightHandPhys" unique_id=404444148]
+shape = SubResource("SphereShape3D_e0xfu")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RightHandPhys" unique_id=877413438]
+material_override = SubResource("StandardMaterial3D_2uoy3")
+mesh = SubResource("SphereMesh_01dio")
+script = ExtResource("2_cdi1f")

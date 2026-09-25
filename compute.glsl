@@ -111,7 +111,7 @@ void main()
 		if (neighborindex >= vertex_buffer_in.verticies.length()) continue;
 		Vertex neighbor = vertex_buffer_in.verticies[neighborindex];
 		Vertex bn = vertex_buffer_in.verticies[bendStart + i];
-		if(neighbor == bn) continue; //so no stretch constraints arent run on a bend-only vertex
+		//if(neighbor == bn) continue; //so no stretch constraints arent run on a bend-only vertex
 		
 		vec3 n_pos = neighbor.pos.xyz;
 		vec3 n_integrated = n_pos;
@@ -130,8 +130,8 @@ void main()
 			vec3 grad = delta_vec / dist; //normalized delta
 			float diff = dist - n.restDistance; //current distance - allowed rest distance
 
-			float w_self = 1.0; //vertex v weight
-			float w_neighbor = (neighbor.flags.x > 0.5) ? 0.0 : 1.0;//neighbor weight, if is pinned it should be weightless and not influence vertex v
+			float w_self = 0.2; //vertex v weight
+			float w_neighbor = (neighbor.flags.x > 0.5) ? 0.0 : 0.2;//neighbor weight, if is pinned it should be weightless and not influence vertex v
 			float inv_mass_sum = w_self + w_neighbor; //add weights
 
 			float deltlagrgnmlt = -diff / (inv_mass_sum + alpha_s);//delta lagrangian multiplier
@@ -148,7 +148,7 @@ void main()
 		
 	}
 
-	float alpha_b = 0.0001 / (params.dt * params.dt); //bend compliance
+	float alpha_b = 0.000001 / (params.dt * params.dt); //bend compliance
 	vec3 bendcorr = vec3(0,0,0);
 	int bendcount = 0;
 
@@ -177,8 +177,8 @@ void main()
 			vec3 grad = delta / dist;
 			float diff = dist - bn.restDistance;
 
-			float w_self = 1.0;
-			float w_neighbor = (neighbor.flags.x > 0.5) ? 0.0 : 1.0;
+			float w_self = 0.2;
+			float w_neighbor = (neighbor.flags.x > 0.5) ? 0.0 : 0.2;
 			float inv_mass_sum = w_self + w_neighbor;
 
 			float deltlagrgnmlt = -diff / (inv_mass_sum + alpha_b);
@@ -193,20 +193,54 @@ void main()
 	
 	for(int c = 0; c < params.colliderCount; c++)
 	{
-		vec3 a = colliders.colliders[c * 4].xyz;
-		vec3 b = colliders.colliders[c * 4 + 1].xyz;
-		float margin = 1.05;
-		float radius = colliders.colliders[c * 4].w * margin;
-		vec3 ab = b - a;
-		float ab2 = dot(ab, ab);
+		float shape_type = colliders.colliders[c * 4 + 1].w;
+		if(shape_type < 0.5)
+		{
+			vec3 a = colliders.colliders[c * 4].xyz;
+			vec3 b = colliders.colliders[c * 4 + 1].xyz;
+			float margin = 1.15;
+			float radius = colliders.colliders[c * 4].w * margin;
+			vec3 ab = b - a;
+			float ab2 = dot(ab, ab);
 
-		float t = (ab2 > 1e-12) ? clamp(dot(nextpos - a, ab) / ab2, 0.0, 1.0) : 0.0;
-		vec3 closest = a + ab * t;
-		vec3 difference = nextpos - closest;
-		float distance = length(difference);
-		if (distance < radius && distance > 1e-7){
-			nextpos = closest + (difference / distance) * (radius);
+			float t = (ab2 > 1e-12) ? clamp(dot(nextpos - a, ab) / ab2, 0.0, 1.0) : 0.0;
+			vec3 closest = a + ab * t;
+			vec3 difference = nextpos - closest;
+			float distance = length(difference);
+			if (distance < radius && distance > 1e-7){
+				nextpos = closest + (difference / distance) * (radius);
+			}
 		}
+		else
+		{
+			vec3 center = colliders.colliders[c * 4].xyz;
+			vec3 half_ext = colliders.colliders[c * 4 + 1].xyz * 1.05;
+			vec3 right = colliders.colliders[c * 4 + 2].xyz;
+			vec3 up = colliders.colliders[c * 4 + 3].xyz;
+			vec3 fwd = cross(right, up);
+			
+			vec3 d = nextpos - center;
+			vec3 localpos = vec3(dot(d, right), dot(d, up), dot(d, fwd));
+			if(all(lessThan(abs(localpos), half_ext)))
+			{
+				vec3 face_dist = half_ext - abs(localpos);
+				if(face_dist.x <= face_dist.y && face_dist.x <= face_dist.z)
+				{
+					localpos.x = sign(localpos.x) * half_ext.x;
+				}
+				else if(face_dist.y <= face_dist.z)
+				{
+					localpos.y = sign(localpos.y) * half_ext.y;
+				}
+				else
+				{
+					localpos.z = sign(localpos.z) * half_ext.z;
+				}
+				nextpos = center + right * localpos.x + up * localpos.y + fwd * localpos.z;
+			}
+			
+		}
+		
 	}
 	
 	
