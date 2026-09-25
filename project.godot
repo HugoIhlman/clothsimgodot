@@ -31,3 +31,8 @@ project/assembly_name="Godot Graphics"
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+
+[xr]
+
+openxr/enabled=true
+shaders/enabled=true
